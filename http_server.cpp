@@ -57,7 +57,7 @@ class session : public std::enable_shared_from_this<session> {
                         //cout << data_ << endl;
                         //memset(data_, '\0', length);
                         //dup_to_child();
-                        //cout << "HTTP/1.1 200 OK\r\n" << flush;
+                        cout << "HTTP/1.1 200 OK\r\n" << flush;
                         
                         break;
                     
