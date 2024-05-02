@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
+#include <sstream>
+#include <vector>
 
 using namespace boost::asio;
 using namespace boost::asio::ip;
@@ -34,9 +36,7 @@ class session : public std::enable_shared_from_this<session> {
     void start() { do_read(); }
 
   private:
-    void http_request_parser() {
 
-    }
 
     void do_read() {
         auto self(shared_from_this());
@@ -47,21 +47,46 @@ class session : public std::enable_shared_from_this<session> {
                 if (!ec) {
 
                     data_[length] = '\0';
-                    cout << data_ << endl;
-                    http_request_parser();
+                    
+                    int child_pid;
+                    child_pid = fork();
+                    switch (child_pid)
+                    {
+                    case 0:
+                        http_request_parser();
+                        //cout << data_ << endl;
+                        //memset(data_, '\0', length);
+                        //dup_to_child();
+                        //cout << "HTTP/1.1 200 OK\r\n" << flush;
+                        
+                        break;
+                    
+                    default:
+                        while(waitpid(-1, NULL, WNOHANG) > 0);
+                        break;
+                    }
                 }
             });
     }
 
-    void do_write(std::size_t length) {
-        auto self(shared_from_this());
-        boost::asio::async_write(
-            socket_, boost::asio::buffer(data_, length),
-            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
-                if (!ec) {
-                    do_read();
-                }
-            });
+    void dup_to_child(){
+        dup2(socket_.native_handle(), STDIN_FILENO);
+        dup2(socket_.native_handle(), STDOUT_FILENO);
+        dup2(socket_.native_handle(), STDERR_FILENO);
+    }
+
+    void http_request_parser() {
+        stringstream ss;
+        ss << string(data_);
+        string token;
+        vector<string> tmp;
+        while(ss >> token) tmp.push_back(token);
+        for(int i = 0;i<tmp.size();++i) cout << tmp[i] << "\n";
+        cout << "=================\n";
+    }
+
+    void set_env(){
+
     }
 
     tcp::socket socket_;
