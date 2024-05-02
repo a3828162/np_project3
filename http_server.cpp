@@ -93,8 +93,7 @@ class server {
 };
 
 int main(int argc, char *argv[]) {
-    std::cout << BOOST_LIB_VERSION << '\n';
-    return 0;
+
     try {
         if (argc != 2) {
             std::cerr << "Usage: async_tcp_echo_server <port>\n";
