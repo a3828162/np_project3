@@ -55,8 +55,8 @@ class session : public std::enable_shared_from_this<session> {
                     case 0:
                         http_request_parser();
                         //cout << data_ << endl;
-                        //memset(data_, '\0', length);
-                        //dup_to_child();
+                        memset(data_, '\0', length);
+                        dup_to_child();
                         cout << "HTTP/1.1 200 OK\r\n" << flush;
                         
                         break;
