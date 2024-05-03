@@ -136,7 +136,6 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     tcp::resolver resolver;
     tcp::socket socket_;
     int index;
-    //tcp::resolver::results_type endpoint_;
     ifstream in;
     enum { max_length = 4096 };
     char data_[max_length];
