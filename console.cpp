@@ -46,19 +46,18 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                          tcp::resolver::results_type result) {
                 if (!ec) {
                     memset(data_, '\0', sizeof(data_));
-                    endpoint_ = result;
-                    do_connect();
+                    
+                    do_connect(result);
                 } else {
-                    cerr << "resolv" << '\n';
-                    socket_.close();
+                    cerr << "resolv error code: " << ec.message() << '\n';
                 }
             });
     }
 
-    void do_connect() {
+    void do_connect(tcp::resolver::results_type &result) {
         auto self(shared_from_this());
         boost::asio::async_connect(
-            socket_, endpoint_,
+            socket_, result,
             [this, self](boost::system::error_code ec, tcp::endpoint ed) {
                 if (!ec) {
                     memset(data_, '\0', sizeof(data_));
@@ -69,9 +68,9 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                     }
                     do_read();
                 } else {
-                    cerr << "connect" << '\n';
+                    cerr << "connect error code: " << ec.message() << '\n';
                     socket_.close();
-                }
+                }   
             });
     }
 
@@ -86,14 +85,17 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                     data_[length] = '\0';
                     string msg = string(data_);
                     memset(data_, '\0', sizeof(data_));
-                    output_message(msg);
+                    string tr_msg = transform_http_type(msg);
+                    cout << "<script>document.getElementById('s" << index
+                        << "').innerHTML += '" << tr_msg << "';</script>\n"
+                        << flush;
                     if (msg.find("% ") != string::npos) {
                         do_write();
                     } else {
                         do_read();
                     }
                 } else {
-                    cerr << "read" << '\n';
+                    cerr << "read error code: " << ec.message() << '\n';
                     socket_.close();
                 }
             });
@@ -104,43 +106,37 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         string cmd;
         getline(in, cmd);
         cmd.push_back('\n');
-        output_command(cmd);
+        string tr_cmd = transform_http_type(cmd);
+        cout << "<script>document.getElementById('s" << index
+             << "').innerHTML += '<b>" << tr_cmd << "</b>';</script>\n"
+             << flush;
         boost::asio::async_write(
             socket_, boost::asio::buffer(cmd, cmd.size()),
-            [this, self](boost::system::error_code ec, std::size_t length) {
+            [this, self, cmd](boost::system::error_code ec, std::size_t length) {
                 if (!ec) {
-                    do_read();
+                    cmd == "exit\n" ? socket_.close() : do_read();
                 }
             });
     }
 
-    void output_message(string content) {
-        escape(content);
-        cout << "<script>document.getElementById('s" << index
-             << "').innerHTML += '" << content << "';</script>\n"
-             << flush;
-    }
+    string transform_http_type(string &input) {
+        string output = "";
+        for(auto &s : input){
+            if(s == '&') output+="&amps";
+            else if(s == '\r') output+="";
+            else if(s== '\n') output+="<br>";
+            else if(s=='\'') output+="\\'";
+            else if(s=='<') output+="&lt;";
+            else if(s=='>') output+='&gt;';
+            else output+=s;
+        }
 
-    void output_command(string content) {
-        escape(content);
-        cout << "<script>document.getElementById('s" << index
-             << "').innerHTML += '<b>" << content << "</b>';</script>\n"
-             << flush;
-    }
-
-    void escape(string &src) {
-        boost::replace_all(src, "&", "&amp;");
-        boost::replace_all(src, "\r", "");
-        boost::replace_all(src, "\n", "&NewLine;");
-        boost::replace_all(src, "\'", "&apos;");
-        boost::replace_all(src, "\"", "&quot;");
-        boost::replace_all(src, "<", "&lt;");
-        boost::replace_all(src, ">", "&gt;");
+        return output;
     }
     tcp::resolver resolver;
     tcp::socket socket_;
     int index;
-    tcp::resolver::results_type endpoint_;
+    //tcp::resolver::results_type endpoint_;
     ifstream in;
     enum { max_length = 4096 };
     char data_[max_length];
