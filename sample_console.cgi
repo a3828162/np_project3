@@ -59,14 +59,14 @@ print(
     <table class="table table-dark table-bordered">
       <thead>
         <tr>
-          <th scope="col">nplinux1.cs.nycu.edu.tw:1234</th>
-          <th scope="col">nplinux2.cs.nycu.edu.tw:5678</th>
+          <th scope="col">nplinux1.cs.nycu.edu.tw:1234</th> // 改這裡
+          <th scope="col">nplinux2.cs.nycu.edu.tw:5678</th> // 改這裡
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td><pre id="s0" class="mb-0"></pre></td>
-          <td><pre id="s1" class="mb-0"></pre></td>
+          <td><pre id="s0" class="mb-0"></pre></td> // 改這裡
+          <td><pre id="s1" class="mb-0"></pre></td> // 改這裡
         </tr>
       </tbody>
     </table>

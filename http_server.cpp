@@ -1,13 +1,13 @@
 #include <boost/asio.hpp>
 #include <cstdlib>
 #include <iostream>
+#include <map>
 #include <memory>
-#include <utility>
+#include <sstream>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
-#include <sstream>
 #include <vector>
 
 using namespace boost::asio;
@@ -15,19 +15,10 @@ using namespace boost::asio::ip;
 using boost::asio::ip::tcp;
 using namespace std;
 
-struct Request {
-    const string env_Variables[9] = {
-        "REQUEST_METHOD",  "REQUEST_URI", "QUERY_STRING",
-        "SERVER_PROTOCOL", "HTTP_HOST",   "SERVER_ADDR",
-        "SERVER_PORT",     "REMOTE_ADDR", "REMOTE_PORT"};
-    string value[9];
-};
-
 const string env_Variables[9] = {
     "REQUEST_METHOD",  "REQUEST_URI", "QUERY_STRING",
     "SERVER_PROTOCOL", "HTTP_HOST",   "SERVER_ADDR",
     "SERVER_PORT",     "REMOTE_ADDR", "REMOTE_PORT"};
-
 
 class session : public std::enable_shared_from_this<session> {
   public:
@@ -36,8 +27,6 @@ class session : public std::enable_shared_from_this<session> {
     void start() { do_read(); }
 
   private:
-
-
     void do_read() {
         auto self(shared_from_this());
 
@@ -47,32 +36,38 @@ class session : public std::enable_shared_from_this<session> {
                 if (!ec) {
 
                     data_[length] = '\0';
-                    
+
                     int child_pid;
                     child_pid = fork();
-                    switch (child_pid)
-                    {
-                    case 0:
+                    if (child_pid < 0) {
+
+                    } else if (child_pid == 0) {
                         http_request_parser();
-                        //cout << data_ << endl;
+                        // cout << data_ << endl;
                         memset(data_, '\0', length);
                         dup_to_child();
                         cout << "HTTP/1.1 200 OK\r\n" << flush;
-                        
-                        break;
-                    
-                    default:
-                        while(waitpid(-1, NULL, WNOHANG) > 0);
-                        break;
+                        string filepath =
+                            "." + env[env_Variables[1]].substr(
+                                      0, env[env_Variables[1]].find("?"));
+
+                        char *argv[] = {(char *)filepath.c_str(), NULL};
+                        if (execvp(argv[0], argv) == -1) {
+                            cerr << "Execute error: " << strerror(errno) << ", "
+                                 << argv[0] << endl;
+                        }
+                    } else if (child_pid > 0) {
+                        socket_.close();
+                        while (waitpid(-1, NULL, WNOHANG) > 0)
+                            ;
                     }
                 }
             });
     }
 
-    void dup_to_child(){
+    void dup_to_child() {
         dup2(socket_.native_handle(), STDIN_FILENO);
         dup2(socket_.native_handle(), STDOUT_FILENO);
-        dup2(socket_.native_handle(), STDERR_FILENO);
     }
 
     void http_request_parser() {
@@ -80,19 +75,36 @@ class session : public std::enable_shared_from_this<session> {
         ss << string(data_);
         string token;
         vector<string> tmp;
-        while(ss >> token) tmp.push_back(token);
-        for(int i = 0;i<tmp.size();++i) cout << tmp[i] << "\n";
-        cout << "=================\n";
-    }
+        while (ss >> token)
+            tmp.push_back(token);
+        for (size_t i = 0; i < tmp.size(); ++i)
+            cout << tmp[i] << " : " << tmp[i].size() << "\n";
 
-    void set_env(){
+        env[env_Variables[0]] = tmp[0];
+        env[env_Variables[1]] = tmp[1];
+        env[env_Variables[3]] = tmp[2];
+        env[env_Variables[4]] = tmp[4];
+        env[env_Variables[5]] = socket_.local_endpoint().address().to_string();
+        env[env_Variables[6]] = to_string(socket_.local_endpoint().port());
+        env[env_Variables[7]] = socket_.remote_endpoint().address().to_string();
+        env[env_Variables[8]] = to_string(socket_.remote_endpoint().port());
 
+        if (env[env_Variables[1]].find("?") != string::npos) {
+            env[env_Variables[2]] = env[env_Variables[1]].substr(
+                env[env_Variables[1]].find("?") + 1);
+        } else {
+            env[env_Variables[2]] = "";
+        }
+
+        for (auto &[key, value] : env) {
+            setenv(key.c_str(), value.c_str(), 1);
+        }
     }
 
     tcp::socket socket_;
     enum { max_length = 1024 };
     char data_[max_length];
-    pair<string, string> env[9];
+    map<string, string> env;
 };
 
 class server {
