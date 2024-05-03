@@ -54,3 +54,4 @@ Thumbs.db
 # exe file
 http_server
 cgi_server
+panel.cgi

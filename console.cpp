@@ -37,6 +37,8 @@ class client : public std::enable_shared_from_this<client> {
     client(boost::asio::io_context &io_context, unsigned long int index)
         : resolver(io_context), socket_(io_context), index(index) {}
 
+    void start() { do_resolve(); }
+
   private:
     void do_resolve() {
         auto self(shared_from_this());
@@ -81,6 +83,8 @@ class client : public std::enable_shared_from_this<client> {
             boost::asio::buffer(data_, max_length),
             [this, self](boost::system::error_code ec, std::size_t length) {
                 if (!ec) {
+                    cerr << data_ << endl;
+                    cerr << "===============\n";
                     if (length == 0)
                         return;
                     data_[length] = '\0';
@@ -255,9 +259,10 @@ int main(int argc, char *argv[]) {
         setEnvVar();
         spiltAndSetClientInfo();
         http();
-
         boost::asio::io_context io_context;
-        client s(io_context, std::atoi(argv[1]));
+        for (int i = 0; i < clients.size(); i++) {
+            std::make_shared<client>(io_context, i)->start();
+        }
         io_context.run();
     } catch (std::exception &e) {
         std::cerr << "Exception: " << e.what() << "\n";
