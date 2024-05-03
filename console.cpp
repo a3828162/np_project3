@@ -7,34 +7,32 @@
 #include <map>
 #include <memory>
 #include <sstream>
-#include <string.h>
+#include <string>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
 #include <vector>
 
-using namespace boost::asio;
-using namespace boost::asio::ip;
 using boost::asio::ip::tcp;
 using namespace std;
+
+struct clientInfo {
+    string hostName;
+    string port;
+    string testFile;
+};
 
 const string env_Variables[9] = {
     "REQUEST_METHOD",  "REQUEST_URI", "QUERY_STRING",
     "SERVER_PROTOCOL", "HTTP_HOST",   "SERVER_ADDR",
     "SERVER_PORT",     "REMOTE_ADDR", "REMOTE_PORT"};
 
-struct clientInfo {
-    string host;
-    string port;
-    string testFile;
-};
-
 map<string, string> env;
-vector<clientInfo> clients;
+vector<clientInfo> clients(5);
 
-class client : public std::enable_shared_from_this<client> {
+class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
-    client(boost::asio::io_context &io_context, unsigned long int index)
+    shellClient(boost::asio::io_context &io_context, int index)
         : resolver(io_context), socket_(io_context), index(index) {}
 
     void start() { do_resolve(); }
@@ -43,7 +41,7 @@ class client : public std::enable_shared_from_this<client> {
     void do_resolve() {
         auto self(shared_from_this());
         resolver.async_resolve(
-            clients[index].host, clients[index].port,
+            clients[index].hostName, clients[index].port,
             [this, self](boost::system::error_code ec,
                          tcp::resolver::results_type result) {
                 if (!ec) {
@@ -83,8 +81,6 @@ class client : public std::enable_shared_from_this<client> {
             boost::asio::buffer(data_, max_length),
             [this, self](boost::system::error_code ec, std::size_t length) {
                 if (!ec) {
-                    cerr << data_ << endl;
-                    cerr << "===============\n";
                     if (length == 0)
                         return;
                     data_[length] = '\0';
@@ -143,43 +139,37 @@ class client : public std::enable_shared_from_this<client> {
     }
     tcp::resolver resolver;
     tcp::socket socket_;
-    unsigned long int index;
+    int index;
     tcp::resolver::results_type endpoint_;
     ifstream in;
     enum { max_length = 4096 };
     char data_[max_length];
 };
 
-void spiltAndSetClientInfo() {
-    stringstream ss(env[env_Variables[2]]);
-    string token;
-
-    while (getline(ss, token, '&')) {
-        cerr << "==========================" << endl;
-        clientInfo c;
-        c.host = token;
-        cerr << token << endl;
-        getline(ss, token, '&');
-        c.port = token;
-        cerr << token << endl;
-        getline(ss, token, '&');
-        c.testFile = token;
-        cerr << token << endl;
-        cerr << "==========================" << endl;
-        clients.push_back(c);
-    }
-}
-
 void setEnvVar() {
-    for (int i = 0; i < 9; ++i) {
-        cerr << "==================\n";
-        env[env_Variables[i]] = getenv(env_Variables[i].c_str());
-        cerr << env_Variables[i] << " : " << env[env_Variables[i]] << endl;
-        cerr << "==================\n";
+    for (auto &s : env_Variables) {
+        env[s] = string(getenv(s.c_str()));
     }
 }
 
-void http() {
+void setClientInfo() {
+    string query = env["QUERY_STRING"];
+    stringstream ss(query);
+    string token;
+    int i = 0;
+    while (getline(ss, token, '&')) {
+        clients[i].hostName =
+            token.substr(token.find("=") + 1, token.size() - 1);
+        getline(ss, token, '&');
+        clients[i].port = token.substr(token.find("=") + 1, token.size() - 1);
+        getline(ss, token, '&');
+        clients[i].testFile =
+            token.substr(token.find("=") + 1, token.size() - 1);
+        ++i;
+    }
+}
+
+void printhttp() {
     cout << "<!DOCTYPE html>" << '\n';
     cout << "<html lang=\"en\">" << '\n';
     cout << "  <head>" << '\n';
@@ -231,15 +221,15 @@ void http() {
     cout << "    <table class=\"table table-dark table-bordered\">" << '\n';
     cout << "      <thead>" << '\n';
     cout << "        <tr>" << '\n';
-    for (unsigned long int i = 0; i < clients.size(); i++) {
-        cout << "          <th scope=\"col\">" << clients[i].host << ":"
+    for (int i = 0; i < clients.size(); i++) {
+        cout << "          <th scope=\"col\">" << clients[i].hostName << ":"
              << clients[i].port << "</th>" << '\n';
     }
     cout << "        </tr>" << '\n';
     cout << "      </thead>" << '\n';
     cout << "      <tbody>" << '\n';
     cout << "        <tr>" << '\n';
-    for (unsigned long int i = 0; i < clients.size(); i++) {
+    for (int i = 0; i < clients.size(); i++) {
         cout << "          <td><pre id=\"s" << i
              << "\" class=\"mb-0\"></pre></td>" << '\n';
     }
@@ -251,21 +241,20 @@ void http() {
     cout << flush;
 }
 
-int main(int argc, char *argv[]) {
-
+int main() {
     try {
         cout << "Content-type: text/html\r\n\r\n" << flush;
-
         setEnvVar();
-        spiltAndSetClientInfo();
-        http();
+        setClientInfo();
+        printhttp();
         boost::asio::io_context io_context;
         for (int i = 0; i < clients.size(); i++) {
-            std::make_shared<client>(io_context, i)->start();
+            std::make_shared<shellClient>(io_context, i)->start();
         }
         io_context.run();
     } catch (std::exception &e) {
         std::cerr << "Exception: " << e.what() << "\n";
     }
+
     return 0;
 }
