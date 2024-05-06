@@ -43,10 +43,12 @@ class session : public std::enable_shared_from_this<session> {
 
                     } else if (child_pid == 0) {
                         http_request_parser();
-                        // cout << data_ << endl;
                         memset(data_, '\0', length);
+                        do_write("HTTP/1.1 200 OK\r\n");
                         dup_to_child();
-                        cout << "HTTP/1.1 200 OK\r\n" << flush;
+                        
+                        //cout << "HTTP/1.1 200 OK\r\n" << flush;
+                        
                         string filepath =
                             "." + env[env_Variables[1]].substr(
                                       0, env[env_Variables[1]].find("?"));
@@ -67,6 +69,17 @@ class session : public std::enable_shared_from_this<session> {
             });
     }
 
+    void do_write(string msg){
+        auto self(shared_from_this());
+        boost::asio::async_write(socket_, boost::asio::buffer(msg, msg.size()),
+                                 [this, self](boost::system::error_code ec,
+                                                   std::size_t length) {
+                                     if (!ec) {
+                                        cerr << "Write OK!\n";
+                                     }
+                                 });
+    }
+
     void dup_to_child() {
         dup2(socket_.native_handle(), STDIN_FILENO);
         dup2(socket_.native_handle(), STDOUT_FILENO);
@@ -79,8 +92,8 @@ class session : public std::enable_shared_from_this<session> {
         vector<string> tmp;
         while (ss >> token)
             tmp.push_back(token);
-        for (size_t i = 0; i < tmp.size(); ++i)
-            cout << tmp[i] << " : " << tmp[i].size() << "\n";
+        /*for (size_t i = 0; i < tmp.size(); ++i)
+            cout << tmp[i] << " : " << tmp[i].size() << "\n";*/
 
         env[env_Variables[0]] = tmp[0];
         env[env_Variables[1]] = tmp[1];
