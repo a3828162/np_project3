@@ -207,6 +207,24 @@ const string env_Variables[9] = {
 
 vector<clientInfo> clients(5);
 
+class shellClient : public std::enable_shared_from_this<shellClient> {
+  public:
+    shellClient(boost::asio::io_context &io_context, int index)
+        : resolver(io_context), socket_(io_context), index(index) {}
+
+  private:
+
+  void start() { do_resolve(); }
+
+  void do_resolve() {}
+
+  tcp::resolver resolver;
+  tcp::socket socket_;
+  int index;
+  enum { max_length = 4096 };
+  char data_[max_length];
+};
+
 class session : public std::enable_shared_from_this<session> {
   public:
     session(tcp::socket socket) : socket_(std::move(socket)) {}
@@ -216,7 +234,7 @@ class session : public std::enable_shared_from_this<session> {
   private:
     void do_read() {
         auto self(shared_from_this());
-
+        
         socket_.async_read_some(
             boost::asio::buffer(data_, max_length),
             [this, self](boost::system::error_code ec, std::size_t length) {
