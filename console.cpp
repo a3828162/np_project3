@@ -46,7 +46,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                          tcp::resolver::results_type result) {
                 if (!ec) {
                     memset(data_, '\0', sizeof(data_));
-                    
+
                     do_connect(result);
                 } else {
                     cerr << "resolv error code: " << ec.message() << '\n';
@@ -70,7 +70,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                 } else {
                     cerr << "connect error code: " << ec.message() << '\n';
                     socket_.close();
-                }   
+                }
             });
     }
 
@@ -87,8 +87,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                     memset(data_, '\0', sizeof(data_));
                     string tr_msg = transform_http_type(msg);
                     cout << "<script>document.getElementById('s" << index
-                        << "').innerHTML += '" << tr_msg << "';</script>\n"
-                        << flush;
+                         << "').innerHTML += '" << tr_msg << "';</script>\n"
+                         << flush;
                     if (msg.find("% ") != string::npos) {
                         do_write();
                     } else {
@@ -110,25 +110,33 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         cout << "<script>document.getElementById('s" << index
              << "').innerHTML += '<b>" << tr_cmd << "</b>';</script>\n"
              << flush;
-        boost::asio::async_write(
-            socket_, boost::asio::buffer(cmd, cmd.size()),
-            [this, self, cmd](boost::system::error_code ec, std::size_t length) {
-                if (!ec) {
-                    cmd == "exit\n" ? socket_.close() : do_read();
-                }
-            });
+        boost::asio::async_write(socket_, boost::asio::buffer(cmd, cmd.size()),
+                                 [this, self, cmd](boost::system::error_code ec,
+                                                   std::size_t length) {
+                                     if (!ec) {
+                                         cmd == "exit\n" ? socket_.close()
+                                                         : do_read();
+                                     }
+                                 });
     }
 
     string transform_http_type(string &input) {
         string output = "";
-        for(auto &s : input){
-            if(s == '&') output+="&amps";
-            else if(s == '\r') output+="";
-            else if(s== '\n') output+="<br>";
-            else if(s=='\'') output+="\\'";
-            else if(s=='<') output+="&lt;";
-            else if(s=='>') output+='&gt;';
-            else output+=s;
+        for (auto &s : input) {
+            if (s == '&')
+                output += "&amps";
+            else if (s == '\r')
+                output += "";
+            else if (s == '\n')
+                output += "<br>";
+            else if (s == '\'')
+                output += "\\'";
+            else if (s == '<')
+                output += "&lt;";
+            else if (s == '>')
+                output += '&gt;';
+            else
+                output += s;
         }
 
         return output;
