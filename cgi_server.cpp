@@ -210,7 +210,7 @@ vector<clientInfo> clients(5);
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
     shellClient(boost::asio::io_context &io_context, int index)
-        : resolver(io_context), socket_(io_context), index(index) {}
+        : resolver(io_context), socket_(io_context), index(index), io_context_(io_context){}
 
   private:
 
@@ -223,11 +223,12 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
   int index;
   enum { max_length = 4096 };
   char data_[max_length];
+  boost::asio::io_context &io_context_;
 };
 
 class session : public std::enable_shared_from_this<session> {
   public:
-    session(tcp::socket socket) : socket_(std::move(socket)) {}
+    session(tcp::socket socket, boost::asio::io_context &io_context) : socket_(std::move(socket)), io_context_(io_context) {}
 
     void start() { do_read(); }
 
@@ -337,6 +338,7 @@ class session : public std::enable_shared_from_this<session> {
         }
     }
 
+    boost::asio::io_context &io_context_;
     tcp::socket socket_;
     enum { max_length = 1024 };
     char data_[max_length];
@@ -346,7 +348,7 @@ class session : public std::enable_shared_from_this<session> {
 class server {
   public:
     server(boost::asio::io_context &io_context, short port)
-        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)) {
+        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)), io_context_(io_context){
         do_accept();
     }
 
@@ -356,13 +358,14 @@ class server {
             [this](boost::system::error_code ec, tcp::socket socket) {
                 if (!ec) {
                     std::cout << "Server: Accept...\n";
-                    std::make_shared<session>(std::move(socket))->start();
+                    std::make_shared<session>(std::move(socket), io_context_)->start();
                 }
 
                 do_accept();
             });
     }
-    boost::asio::io_context io_context_;
+    
+    boost::asio::io_context &io_context_;
     tcp::acceptor acceptor_;
 };
 
