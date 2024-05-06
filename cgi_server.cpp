@@ -206,128 +206,6 @@ const string env_Variables[9] = {
     "SERVER_PORT",     "REMOTE_ADDR", "REMOTE_PORT"};
 
 vector<clientInfo> clients(5);
-boost::asio::io_context io_context_;
-
-class shellClient : public std::enable_shared_from_this<shellClient> {
-  public:
-    shellClient(boost::asio::io_context &io_context, tcp::socket socket,
-                shared_ptr<tcp::socket> client_socket, clientInfo connection,
-                int sid)
-        : resolver(io_context), socket_(io_context), index(index) {}
-
-    void start() { do_resolve(); }
-
-  private:
-    void do_resolve() {
-        auto self(shared_from_this());
-        resolver.async_resolve(
-            clients[index].hostName, clients[index].port,
-            [this, self](boost::system::error_code ec,
-                         tcp::resolver::results_type result) {
-                if (!ec) {
-                    memset(data_, '\0', sizeof(data_));
-
-                    do_connect(result);
-                } else {
-                    cerr << "resolv error code: " << ec.message() << '\n';
-                }
-            });
-    }
-
-    void do_connect(tcp::resolver::results_type &result) {
-        auto self(shared_from_this());
-        boost::asio::async_connect(
-            socket_, result,
-            [this, self](boost::system::error_code ec, tcp::endpoint ed) {
-                if (!ec) {
-                    memset(data_, '\0', sizeof(data_));
-                    // in.open("./test_case/" + clients[index].testFile);
-                    /*if (!in.is_open()) {
-                        cout << clients[index].testFile << " open fail\n";
-                        socket_.close();
-                    }*/
-                    do_read();
-                } else {
-                    cerr << "connect error code: " << ec.message() << '\n';
-                    socket_.close();
-                }
-            });
-    }
-
-    void do_read() {
-        auto self(shared_from_this());
-        socket_.async_read_some(
-            boost::asio::buffer(data_, max_length),
-            [this, self](boost::system::error_code ec, std::size_t length) {
-                if (!ec) {
-                    if (length == 0)
-                        return;
-                    data_[length] = '\0';
-                    string msg = string(data_);
-                    memset(data_, '\0', sizeof(data_));
-                    string tr_msg = transform_http_type(msg);
-                    cout << "<script>document.getElementById('s" << index
-                         << "').innerHTML += '" << tr_msg << "';</script>\n"
-                         << flush;
-                    if (msg.find("% ") != string::npos) {
-                        do_write();
-                    } else {
-                        do_read();
-                    }
-                } else {
-                    cerr << "read error code: " << ec.message() << '\n';
-                    socket_.close();
-                }
-            });
-    }
-
-    void do_write() {
-        auto self(shared_from_this());
-        string cmd;
-        // getline(in, cmd);
-        cmd.push_back('\n');
-        string tr_cmd = transform_http_type(cmd);
-        cout << "<script>document.getElementById('s" << index
-             << "').innerHTML += '<b>" << tr_cmd << "</b>';</script>\n"
-             << flush;
-        boost::asio::async_write(socket_, boost::asio::buffer(cmd, cmd.size()),
-                                 [this, self, cmd](boost::system::error_code ec,
-                                                   std::size_t length) {
-                                     if (!ec) {
-                                         cmd == "exit\n" ? socket_.close()
-                                                         : do_read();
-                                     }
-                                 });
-    }
-
-    string transform_http_type(string &input) {
-        string output = "";
-        for (auto &s : input) {
-            if (s == '&')
-                output += "&amps";
-            else if (s == '\r')
-                output += "";
-            else if (s == '\n')
-                output += "<br>";
-            else if (s == '\'')
-                output += "\\'";
-            else if (s == '<')
-                output += "&lt;";
-            else if (s == '>')
-                output += '&gt;';
-            else
-                output += s;
-        }
-
-        return output;
-    }
-    tcp::resolver resolver;
-    tcp::socket socket_;
-    int index;
-    // ifstream in;
-    enum { max_length = 4096 };
-    char data_[max_length];
-};
 
 class session : public std::enable_shared_from_this<session> {
   public:
@@ -347,7 +225,6 @@ class session : public std::enable_shared_from_this<session> {
                     data_[length] = '\0';
                     http_request_parser();
                     memset(data_, '\0', length);
-                    cout << "HTTP/1.1 200 OK\r\n" << flush;
                     cgi_handler();
                 }
             });
@@ -362,7 +239,7 @@ class session : public std::enable_shared_from_this<session> {
             [this, self](boost::system::error_code ec, size_t s) {
                 string cgiFileName = env[env_Variables[1]].substr(
                     0, env[env_Variables[1]].find("?"));
-
+                cout << cgiFileName << endl;
                 if (cgiFileName == "/panel.cgi") {
                     panel_handler();
                 } else if (cgiFileName == "/console.cgi") {
@@ -373,17 +250,6 @@ class session : public std::enable_shared_from_this<session> {
                     shared_ptr<tcp::socket> shared_client_ =
                         make_shared<tcp::socket>(move(socket_));
 
-                    for (int i = 0; i < clients.size(); i++) {
-                        if (clients[i].hostName != "" &&
-                            clients[i].port != "" &&
-                            clients[i].testFile != "") {
-                            tcp::socket remote_(io_context);
-                            make_shared<shellClient>(io_context_, move(remote_),
-                                                     shared_client_, clients[i],
-                                                     i)
-                                ->start();
-                        }
-                    }
                 } else {
                     socket_.close();
                 }
@@ -393,6 +259,7 @@ class session : public std::enable_shared_from_this<session> {
     void panel_handler() {
         auto self(shared_from_this());
         string panel_page = get_panel_page();
+
         boost::asio::async_write(
             socket_,
             boost::asio::buffer(panel_page.c_str(), panel_page.length()),
@@ -460,8 +327,8 @@ class session : public std::enable_shared_from_this<session> {
 
 class server {
   public:
-    server(short port)
-        : acceptor_(io_context_, tcp::endpoint(tcp::v4(), port)) {
+    server(boost::asio::io_context &io_context, short port)
+        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)) {
         do_accept();
     }
 
@@ -487,10 +354,10 @@ int main(int argc, char *argv[]) {
             std::cerr << "Usage: async_tcp_echo_server <port>\n";
             return 1;
         }
+        boost::asio::io_context io_context;
+        server s(io_context, std::atoi(argv[1]));
 
-        server s(std::atoi(argv[1]));
-
-        io_context_.run();
+        io_context.run();
     } catch (std::exception &e) {
         std::cerr << "Exception: " << e.what() << "\n";
     }
