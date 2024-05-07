@@ -121,32 +121,17 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     }
 
     string transform_http_type(string &input) {
-        /*string output = "";
-        for (auto &s : input) {
-            if (s == '&')
-                output += "&amp;";
-            else if (s == '\r')
-                output += "";
-            else if (s == '\n')
-                output += "<br>";
-            else if (s == '\'')
-                output += "\\'";
-            else if (s == '<')
-                output += "&lt;";
-            else if (s == '>')
-                output += '&gt;';
-            else
-                output += s;
-        }*/
-        boost::replace_all(input, "&", "&amp;");
-        boost::replace_all(input, ">", "&gt;");
-        boost::replace_all(input, "<", "&lt;");
-        boost::replace_all(input, "\"", "&quot;");
-        boost::replace_all(input, "\'", "&apos;");
-        boost::replace_all(input, "\n", "&NewLine;");
-        boost::replace_all(input, "\r", "");
 
-        return input;
+        string output(input);
+        boost::replace_all(output, "&", "&amp;");
+        boost::replace_all(output, ">", "&gt;");
+        boost::replace_all(output, "<", "&lt;");
+        boost::replace_all(output, "\"", "&quot;");
+        boost::replace_all(output, "\'", "&apos;");
+        boost::replace_all(output, "\n", "&NewLine;");
+        boost::replace_all(output, "\r", "");
+
+        return output;
     }
     tcp::resolver resolver;
     tcp::socket socket_;
