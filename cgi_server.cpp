@@ -209,8 +209,9 @@ vector<clientInfo> clients(5);
 
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
-    shellClient(boost::asio::io_context &io_context, tcp::socket remoteServerSocket ,shared_ptr<tcp::socket> shared_client, int index)
-        : resolver(io_context), socket_(move(remoteServerSocket)), shared_client_(shared_client) ,index(index){
+    shellClient(boost::asio::io_context &io_context, tcp::socket remoteServerSocket ,shared_ptr<tcp::socket> shared_client, int c_index)
+        : resolver(io_context), socket_(move(remoteServerSocket)), shared_client_(shared_client){
+          index = c_index;
           clientPtr = &clients[index];
         }
 
@@ -223,7 +224,10 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     tcp::resolver::query query(clientPtr->hostName, clientPtr->port);
     resolver.async_resolve(query, [this, self](boost::system::error_code ec, tcp::resolver::results_type results) {
       if (!ec) {
+        memset(data_, '\0', sizeof(data_));
         do_connect(results);
+      } else {
+          cerr << "resolv error code: " << ec.message() << '\n';
       }
     });
   }
@@ -233,6 +237,9 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     boost::asio::async_connect(socket_, results, [this, self](boost::system::error_code ec, tcp::endpoint) {
       if (!ec) {
         do_read();
+      } else  {
+          cerr << "connect error code: " << ec.message() << '\n';
+          socket_.close();
       }
     });
   }
@@ -314,7 +321,7 @@ class session : public std::enable_shared_from_this<session> {
                         if (clients[i].hostName != "" && clients[i].port != "" &&
                             clients[i].testFile != "") {
                             tcp::socket remoteClient_(io_context_);
-                            make_shared<shellClient>(io_context_, remoteClient_, shared_client_ ,i)->start();
+                            //make_shared<shellClient>(io_context_, remoteClient_, shared_client_ ,i)->start();
                         }
                     }
                 } else {

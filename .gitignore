@@ -57,3 +57,6 @@ cgi_server.exe
 cgi_server
 panel.cgi
 console.cgi
+
+t.cpp
+t
