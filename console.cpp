@@ -121,10 +121,10 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     }
 
     string transform_http_type(string &input) {
-        string output = "";
+        /*string output = "";
         for (auto &s : input) {
             if (s == '&')
-                output += "&amps";
+                output += "&amp;";
             else if (s == '\r')
                 output += "";
             else if (s == '\n')
@@ -137,9 +137,16 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                 output += '&gt;';
             else
                 output += s;
-        }
+        }*/
+        boost::replace_all(input, "&", "&amp;");
+        boost::replace_all(input, ">", "&gt;");
+        boost::replace_all(input, "<", "&lt;");
+        boost::replace_all(input, "\"", "&quot;");
+        boost::replace_all(input, "\'", "&apos;");
+        boost::replace_all(input, "\n", "&NewLine;");
+        boost::replace_all(input, "\r", "");
 
-        return output;
+        return input;
     }
     tcp::resolver resolver;
     tcp::socket socket_;

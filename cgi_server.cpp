@@ -1,9 +1,10 @@
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <map>
-#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string.h>
@@ -67,7 +68,7 @@ string get_panel_page() {
     string host_menu;
     for (int i = 0; i < 12; i++) {
         host_menu += "<option value=\"nplinux" + to_string(i + 1) +
-                     ".cs.nctu.edu.tw\">nplinux" + to_string(i + 1) +
+                     ".cs.nycu.edu.tw\">nplinux" + to_string(i + 1) +
                      "</option>";
     }
 
@@ -83,7 +84,7 @@ string get_panel_page() {
 	                <option></option>"%3%"
 	              </select>
 	              <div class="input-group-append">
-	                <span class="input-group-text">.cs.nctu.edu.tw</span>
+	                <span class="input-group-text">.cs.nycu.edu.tw</span>
 	              </div>
 	            </div>
 	          </td>
@@ -169,7 +170,7 @@ string get_console_page(vector<clientInfo> cnt) {
     for (int i = 0; i < cnt.size(); i++) {
         if (cnt[i].hostName != "" && cnt[i].port != "" &&
             cnt[i].testFile != "") {
-            console_part1 += "<th scope=\"col\">" + cnt[i].testFile + ":" +
+            console_part1 += "<th scope=\"col\">" + cnt[i].hostName + ":" +
                              cnt[i].port + "</th>\r\n";
         }
     }
@@ -210,158 +211,171 @@ vector<clientInfo> clients(5);
 
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
-    shellClient(boost::asio::io_context &io_context, tcp::socket remoteServerSocket ,shared_ptr<tcp::socket> shared_client, int c_index)
-        : resolver(io_context), socket_(move(remoteServerSocket)), shared_client_(shared_client){
-          index = c_index;
-          clientPtr = &clients[index];
-        }
+    shellClient(boost::asio::io_context &io_context,
+                tcp::socket remoteServerSocket,
+                shared_ptr<tcp::socket> shared_client, int c_index)
+        : resolver(io_context), socket_(move(remoteServerSocket)),
+          shared_client_(shared_client) {
+        index = c_index;
+        clientPtr = &clients[index];
+    }
 
-  void start() { 
-    cmds.clear();
-    readCommandFromFile();
-    do_resolve(); 
-  }
+    void start() {
+        cout << "Start Remote Server\n";
+        cmds.clear();
+        readCommandFromFile();
+        do_resolve();
+    }
 
   private:
-
-  void do_resolve() {
-    auto self(shared_from_this());
-    tcp::resolver::query query(clientPtr->hostName, clientPtr->port);
-    resolver.async_resolve(query, [this, self](boost::system::error_code ec, tcp::resolver::results_type results) {
-      if (!ec) {
-        memset(data_, '\0', sizeof(data_));
-        do_connect(results);
-      } else {
-        cerr << "resolv error code: " << ec.message() << '\n';
-      }
-    });
-  }
-
-  void do_connect(tcp::resolver::results_type results) {
-    auto self(shared_from_this());
-    boost::asio::async_connect(socket_, results, [this, self](boost::system::error_code ec, tcp::endpoint) {
-      if (!ec) {
-        do_read();
-      } else  {
-        cerr << "connect error code: " << ec.message() << '\n';
-        socket_.close();
-      }
-    });
-  }
-
-  void do_read() {
-    auto self(shared_from_this());
-    socket_.async_read_some(boost::asio::buffer(data_, max_length), [this, self](boost::system::error_code ec, size_t length) {
-      if (!ec) {
-        data_[length] = '\0';
-        cout << "Read from " << clientPtr->hostName << ":" << clientPtr->port << " : " << data_ << endl;
-        string msg(data_);
-        memset(data_, '\0', sizeof(data_));
-        string output = output_to_client(msg);
-        doWriteClient(output);
-        if(msg.find("%") != string::npos){
-          if(cmds.size() > 0){
-            string cmd = cmds.front();
-            cmds.erase(cmds.begin());
-            doWriteRemoteServer(cmd);
-          }
-        } else {
-          do_read();
-        }
-      }
-    });
-  }
-
-  void doWriteClient(string output) {
-    auto self(shared_from_this());
-    boost::asio::async_write(*shared_client_, boost::asio::buffer(output.c_str(), output.size()), [this, self](boost::system::error_code ec, size_t) {
-      if (!ec) {
-        cout << "Write to client OK" << endl;
-      }
-    });
-  }
-
-  void doWriteRemoteServer(string command) {
-    auto self(shared_from_this());
-    boost::asio::async_write(socket_, boost::asio::buffer(command.c_str(), command.size()), [this, self, command](boost::system::error_code ec, size_t) {
-      if (!ec) {
-        cout << "Write to " << clientPtr->hostName << ":" << clientPtr->port << " OK" << endl;
-        if(command.find("exit") == string::npos){
-          do_read();
-          cout << "Remote closed!!\n";
-        } else {
-          socket_.close();
-        }
-      }
-    });
-  }
-
-  string command_to_client(string msg){
-    string escaped = html_escape(msg);
-    return + "<script>document.getElementById(\'s" + to_string(index) + "\').innerHTML += \'<b>" + escaped + "</b>\';</script>";
-  }
-
-  string output_to_client(string msg){
-    string escaped = html_escape(msg);
-    return + "<script>document.getElementById(\'s" + to_string(index) + "\').innerHTML += \'" + escaped + "\';</script>";  
-  }
-
-  string html_escape(string str) {
-    string escaped;
-    for (char c : str) {
-      switch (c) {
-        case '&':
-          escaped += "&amp;";
-          break;
-        case '\"':
-          escaped += "&quot;";
-          break;
-        case '\'':
-          escaped += "&apos;";
-          break;
-        case '<':
-          escaped += "&lt;";
-          break;
-        case '>':
-          escaped += "&gt;";
-          break;
-        default:
-          escaped += c;
-      }
+    void do_resolve() {
+        auto self(shared_from_this());
+        cout << "Resolving " << clientPtr->hostName << ":" << clientPtr->port
+             << endl;
+        tcp::resolver::query query(clientPtr->hostName, clientPtr->port);
+        resolver.async_resolve(
+            query, [this, self](boost::system::error_code ec,
+                                tcp::resolver::results_type results) {
+                if (!ec) {
+                    memset(data_, '\0', sizeof(data_));
+                    do_connect(results);
+                } else {
+                    cerr << "resolv error code: " << ec.message() << '\n';
+                }
+            });
     }
-    return escaped;
-  }
 
-  void readCommandFromFile(){
-    std::ifstream ifs("test_case/" + clientPtr->testFile);
-    string line;
-    while(ifs >> line){
-      cmds.push_back(line + "\n");
-      cout << "line: " << line << endl;
+    void do_connect(tcp::resolver::results_type results) {
+        auto self(shared_from_this());
+        boost::asio::async_connect(
+            socket_, results,
+            [this, self](boost::system::error_code ec, tcp::endpoint) {
+                if (!ec) {
+                    do_read();
+                } else {
+                    cerr << "connect error code: " << ec.message() << '\n';
+                    socket_.close();
+                }
+            });
     }
-  }
 
-  vector<string> cmds;
-  tcp::resolver resolver; // resolve host name to ip address
-  tcp::socket socket_; // socket to remote np server
-  shared_ptr<tcp::socket> shared_client_; // share ptr to browser socket
-  clientInfo* clientPtr; // pointer to clientInfo
-  int index; // index of client in clients vector
-  enum { max_length = 4096 }; // max length of data
-  char data_[max_length]; // data buffer
-  //boost::asio::io_context &io_context_; 
+    void do_read() {
+        auto self(shared_from_this());
+        socket_.async_read_some(
+            boost::asio::buffer(data_, max_length),
+            [this, self](boost::system::error_code ec, size_t length) {
+                if (!ec) {
+                    data_[length] = '\0';
+                    string msg(data_);
+                    /*cout << "Read from " << clientPtr->hostName << ":"
+                         << clientPtr->port << " : " << msg << endl;
+                    cout << "====================\n";*/
+                    memset(data_, '\0', sizeof(data_));
+                    string output = output_to_client(msg);
+                    // cout << "output: " << output << endl;
+                    doWriteClient(output);
+                    if (msg.find("%") != string::npos) {
+                        if (cmds.size() > 0) {
+                            string cmd = cmds.front();
+                            cmds.erase(cmds.begin());
+                            cout << "cmd: " << cmd << " size: " << cmd.size()
+                                 << endl;
+
+                            string command = command_to_client(cmd);
+                            doWriteClient(command);
+                            doWriteRemoteServer(cmd);
+                        }
+                    } else {
+                        do_read();
+                    }
+                }
+            });
+    }
+
+    void doWriteClient(string output) {
+        auto self(shared_from_this());
+        boost::asio::async_write(
+            *shared_client_,
+            boost::asio::buffer(output.c_str(), output.length()),
+            [this, self](boost::system::error_code ec, size_t) {
+                if (!ec) {
+                    cout << "Write to client OK" << endl;
+                }
+            });
+    }
+
+    void doWriteRemoteServer(string command) {
+        auto self(shared_from_this());
+        boost::asio::async_write(
+            socket_, boost::asio::buffer(command.c_str(), command.length()),
+            [this, self, command](boost::system::error_code ec, size_t) {
+                if (!ec) {
+                    cout << "Write to " << clientPtr->hostName << ":"
+                         << clientPtr->port << " OK" << endl;
+                    if (command.find("exit") == string::npos) {
+                        do_read();
+
+                    } else {
+                        socket_.close();
+                        cout << "Remote closed!!\n";
+                    }
+                }
+            });
+    }
+    string output_to_client(string msg) {
+        string escaped = html_escape(msg);
+        return +"<script>document.getElementById(\'s" + to_string(index) +
+               "\').innerHTML += \'" + escaped + "\';</script>";
+    }
+
+    string command_to_client(string msg) {
+        string escaped = html_escape(msg);
+        return +"<script>document.getElementById(\'s" + to_string(index) +
+               "\').innerHTML += \'<b>" + escaped + "</b>\';</script>";
+    }
+
+    string html_escape(string str) {
+        boost::replace_all(str, "&", "&amp;");
+        boost::replace_all(str, ">", "&gt;");
+        boost::replace_all(str, "<", "&lt;");
+        boost::replace_all(str, "\"", "&quot;");
+        boost::replace_all(str, "\'", "&apos;");
+        boost::replace_all(str, "\n", "&NewLine;");
+        boost::replace_all(str, "\r", "");
+        return str;
+    }
+
+    void readCommandFromFile() {
+        std::ifstream ifs("test_case/" + clientPtr->testFile);
+        string line;
+        while (getline(ifs, line)) {
+            cmds.push_back(line + "\n");
+            cout << "line: " << line << endl;
+        }
+    }
+
+    vector<string> cmds;
+    tcp::resolver resolver;                 // resolve host name to ip address
+    tcp::socket socket_;                    // socket to remote np server
+    shared_ptr<tcp::socket> shared_client_; // share ptr to browser socket
+    clientInfo *clientPtr;                  // pointer to clientInfo
+    int index;                              // index of client in clients vector
+    enum { max_length = 4096 };             // max length of data
+    char data_[max_length];                 // data buffer
+    // boost::asio::io_context &io_context_;
 };
 
 class session : public std::enable_shared_from_this<session> {
   public:
-    session(tcp::socket socket, boost::asio::io_context &io_context) : socket_(std::move(socket)), io_context_(io_context) {}
+    session(tcp::socket socket, boost::asio::io_context &io_context)
+        : socket_(std::move(socket)), io_context_(io_context) {}
 
     void start() { do_read(); }
 
   private:
     void do_read() {
         auto self(shared_from_this());
-        
+
         socket_.async_read_some(
             boost::asio::buffer(data_, max_length),
             [this, self](boost::system::error_code ec, std::size_t length) {
@@ -395,10 +409,14 @@ class session : public std::enable_shared_from_this<session> {
                     shared_ptr<tcp::socket> shared_client_ =
                         make_shared<tcp::socket>(move(socket_));
                     for (int i = 0; i < clients.size(); i++) {
-                        if (clients[i].hostName != "" && clients[i].port != "" &&
+                        if (clients[i].hostName != "" &&
+                            clients[i].port != "" &&
                             clients[i].testFile != "") {
                             tcp::socket remoteClient_(io_context_);
-                            //make_shared<shellClient>(io_context_, remoteClient_, shared_client_ ,i)->start();
+                            make_shared<shellClient>(io_context_,
+                                                     move(remoteClient_),
+                                                     shared_client_, i)
+                                ->start();
                         }
                     }
                 } else {
@@ -451,6 +469,12 @@ class session : public std::enable_shared_from_this<session> {
                 token.substr(token.find("=") + 1, token.size() - 1);
             ++i;
         }
+
+        /*for (int i = 0; i < clients.size(); i++) {
+            cout << "hostName: " << clients[i].hostName << endl;
+            cout << "port: " << clients[i].port << endl;
+            cout << "testFile: " << clients[i].testFile << endl;
+        }*/
     }
 
     void http_request_parser() {
@@ -492,7 +516,8 @@ class session : public std::enable_shared_from_this<session> {
 class server {
   public:
     server(boost::asio::io_context &io_context, short port)
-        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)), io_context_(io_context){
+        : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)),
+          io_context_(io_context) {
         do_accept();
     }
 
@@ -502,13 +527,14 @@ class server {
             [this](boost::system::error_code ec, tcp::socket socket) {
                 if (!ec) {
                     std::cout << "Server: Accept...\n";
-                    std::make_shared<session>(std::move(socket), io_context_)->start();
+                    std::make_shared<session>(std::move(socket), io_context_)
+                        ->start();
                 }
 
                 do_accept();
             });
     }
-    
+
     boost::asio::io_context &io_context_;
     tcp::acceptor acceptor_;
 };
