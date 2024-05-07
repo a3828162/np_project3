@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string.h>
@@ -215,7 +216,11 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
           clientPtr = &clients[index];
         }
 
-  void start() { do_resolve(); }
+  void start() { 
+    cmds.clear();
+    readCommandFromFile();
+    do_resolve(); 
+  }
 
   private:
 
@@ -227,7 +232,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         memset(data_, '\0', sizeof(data_));
         do_connect(results);
       } else {
-          cerr << "resolv error code: " << ec.message() << '\n';
+        cerr << "resolv error code: " << ec.message() << '\n';
       }
     });
   }
@@ -238,8 +243,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
       if (!ec) {
         do_read();
       } else  {
-          cerr << "connect error code: " << ec.message() << '\n';
-          socket_.close();
+        cerr << "connect error code: " << ec.message() << '\n';
+        socket_.close();
       }
     });
   }
@@ -250,21 +255,93 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
       if (!ec) {
         data_[length] = '\0';
         cout << "Read from " << clientPtr->hostName << ":" << clientPtr->port << " : " << data_ << endl;
-        do_write(length);
+        string msg(data_);
+        memset(data_, '\0', sizeof(data_));
+        string output = output_to_client(msg);
+        doWriteClient(output);
+        if(msg.find("%") != string::npos){
+          if(cmds.size() > 0){
+            string cmd = cmds.front();
+            cmds.erase(cmds.begin());
+            doWriteRemoteServer(cmd);
+          }
+        } else {
+          do_read();
+        }
       }
     });
   }
 
-  void do_write(size_t length) {
+  void doWriteClient(string output) {
     auto self(shared_from_this());
-    boost::asio::async_write(socket_, boost::asio::buffer(data_, length), [this, self](boost::system::error_code ec, size_t) {
+    boost::asio::async_write(*shared_client_, boost::asio::buffer(output.c_str(), output.size()), [this, self](boost::system::error_code ec, size_t) {
       if (!ec) {
-        cout << "Write to " << clientPtr->hostName << ":" << clientPtr->port << " : " << data_ << endl;
-        do_read();
+        cout << "Write to client OK" << endl;
       }
     });
   }
 
+  void doWriteRemoteServer(string command) {
+    auto self(shared_from_this());
+    boost::asio::async_write(socket_, boost::asio::buffer(command.c_str(), command.size()), [this, self, command](boost::system::error_code ec, size_t) {
+      if (!ec) {
+        cout << "Write to " << clientPtr->hostName << ":" << clientPtr->port << " OK" << endl;
+        if(command.find("exit") == string::npos){
+          do_read();
+          cout << "Remote closed!!\n";
+        } else {
+          socket_.close();
+        }
+      }
+    });
+  }
+
+  string command_to_client(string msg){
+    string escaped = html_escape(msg);
+    return + "<script>document.getElementById(\'s" + to_string(index) + "\').innerHTML += \'<b>" + escaped + "</b>\';</script>";
+  }
+
+  string output_to_client(string msg){
+    string escaped = html_escape(msg);
+    return + "<script>document.getElementById(\'s" + to_string(index) + "\').innerHTML += \'" + escaped + "\';</script>";  
+  }
+
+  string html_escape(string str) {
+    string escaped;
+    for (char c : str) {
+      switch (c) {
+        case '&':
+          escaped += "&amp;";
+          break;
+        case '\"':
+          escaped += "&quot;";
+          break;
+        case '\'':
+          escaped += "&apos;";
+          break;
+        case '<':
+          escaped += "&lt;";
+          break;
+        case '>':
+          escaped += "&gt;";
+          break;
+        default:
+          escaped += c;
+      }
+    }
+    return escaped;
+  }
+
+  void readCommandFromFile(){
+    std::ifstream ifs("test_case/" + clientPtr->testFile);
+    string line;
+    while(ifs >> line){
+      cmds.push_back(line + "\n");
+      cout << "line: " << line << endl;
+    }
+  }
+
+  vector<string> cmds;
   tcp::resolver resolver; // resolve host name to ip address
   tcp::socket socket_; // socket to remote np server
   shared_ptr<tcp::socket> shared_client_; // share ptr to browser socket
