@@ -209,21 +209,63 @@ vector<clientInfo> clients(5);
 
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
-    shellClient(boost::asio::io_context &io_context, int index)
-        : resolver(io_context), socket_(io_context), index(index), io_context_(io_context){}
-
-  private:
+    shellClient(boost::asio::io_context &io_context, tcp::socket remoteServerSocket ,shared_ptr<tcp::socket> shared_client, int index)
+        : resolver(io_context), socket_(move(remoteServerSocket)), shared_client_(shared_client) ,index(index){
+          clientPtr = &clients[index];
+        }
 
   void start() { do_resolve(); }
 
-  void do_resolve() {}
+  private:
 
-  tcp::resolver resolver;
-  tcp::socket socket_;
-  int index;
-  enum { max_length = 4096 };
-  char data_[max_length];
-  boost::asio::io_context &io_context_;
+  void do_resolve() {
+    auto self(shared_from_this());
+    tcp::resolver::query query(clientPtr->hostName, clientPtr->port);
+    resolver.async_resolve(query, [this, self](boost::system::error_code ec, tcp::resolver::results_type results) {
+      if (!ec) {
+        do_connect(results);
+      }
+    });
+  }
+
+  void do_connect(tcp::resolver::results_type results) {
+    auto self(shared_from_this());
+    boost::asio::async_connect(socket_, results, [this, self](boost::system::error_code ec, tcp::endpoint) {
+      if (!ec) {
+        do_read();
+      }
+    });
+  }
+
+  void do_read() {
+    auto self(shared_from_this());
+    socket_.async_read_some(boost::asio::buffer(data_, max_length), [this, self](boost::system::error_code ec, size_t length) {
+      if (!ec) {
+        data_[length] = '\0';
+        cout << "Read from " << clientPtr->hostName << ":" << clientPtr->port << " : " << data_ << endl;
+        do_write(length);
+      }
+    });
+  }
+
+  void do_write(size_t length) {
+    auto self(shared_from_this());
+    boost::asio::async_write(socket_, boost::asio::buffer(data_, length), [this, self](boost::system::error_code ec, size_t) {
+      if (!ec) {
+        cout << "Write to " << clientPtr->hostName << ":" << clientPtr->port << " : " << data_ << endl;
+        do_read();
+      }
+    });
+  }
+
+  tcp::resolver resolver; // resolve host name to ip address
+  tcp::socket socket_; // socket to remote np server
+  shared_ptr<tcp::socket> shared_client_; // share ptr to browser socket
+  clientInfo* clientPtr; // pointer to clientInfo
+  int index; // index of client in clients vector
+  enum { max_length = 4096 }; // max length of data
+  char data_[max_length]; // data buffer
+  //boost::asio::io_context &io_context_; 
 };
 
 class session : public std::enable_shared_from_this<session> {
@@ -268,7 +310,13 @@ class session : public std::enable_shared_from_this<session> {
                     console_handler();
                     shared_ptr<tcp::socket> shared_client_ =
                         make_shared<tcp::socket>(move(socket_));
-
+                    for (int i = 0; i < clients.size(); i++) {
+                        if (clients[i].hostName != "" && clients[i].port != "" &&
+                            clients[i].testFile != "") {
+                            tcp::socket remoteClient_(io_context_);
+                            make_shared<shellClient>(io_context_, remoteClient_, shared_client_ ,i)->start();
+                        }
+                    }
                 } else {
                     socket_.close();
                 }
@@ -289,7 +337,19 @@ class session : public std::enable_shared_from_this<session> {
             });
     }
 
-    void console_handler() {}
+    void console_handler() {
+        auto self(shared_from_this());
+        string console_page = get_console_page(clients);
+
+        boost::asio::async_write(
+            socket_,
+            boost::asio::buffer(console_page.c_str(), console_page.length()),
+            [this, self](boost::system::error_code ec, size_t) {
+                if (!ec) {
+                    cout << "Write Console.cgi OK" << endl;
+                }
+            });
+    }
 
     void setClientInfo() {
         string query = env["QUERY_STRING"];
