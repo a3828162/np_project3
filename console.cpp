@@ -30,8 +30,8 @@ const string env_Variables[9] = {
 map<string, string> env;
 vector<clientInfo> clients(5);
 
-string get_console_page() {
-    string console_head = R"(
+string get_console_html() {
+    string consoleHead = R"(
 		<!DOCTYPE html>
 		<html lang="en">
 		  <head>
@@ -73,32 +73,31 @@ string get_console_page() {
 		      <thead>
 		        <tr>
 	)";
-
-    string console_body1;
+    string consoleBody1;
     for (int i = 0; i < clients.size(); i++) {
         if (clients[i].hostName != "" && clients[i].port != "" &&
             clients[i].testFile != "") {
-            console_body1 += "<th scope=\"col\">" + clients[i].hostName + ":" +
-                             clients[i].port + "</th>\r\n";
+            consoleBody1 += "<th scope=\"col\">" + clients[i].hostName + ":" +
+                            clients[i].port + "</th>\r\n";
         }
     }
 
-    string console_body2 = R"(
+    string consoleBody2 = R"(
 				</tr>
 		      </thead>
 		      <tbody>
 		        <tr>
 	)";
 
-    string console_body3;
+    string consoleBody3;
     for (int i = 0; i < clients.size(); i++) {
         if (clients[i].hostName != "" && clients[i].port != "" &&
             clients[i].testFile != "") {
-            console_body3 += "<td><pre id=\"s" + to_string(i) +
-                             "\" class=\"mb-0\"></pre></td>\r\n";
+            consoleBody3 += "<td><pre id=\"s" + to_string(i) +
+                            "\" class=\"mb-0\"></pre></td>\r\n";
         }
     }
-    string console_body4 = R"(
+    string consoleBody4 = R"(
 		        </tr>
 		      </tbody>
 		    </table>
@@ -106,8 +105,8 @@ string get_console_page() {
 		</html>
 	)";
 
-    return console_head + console_body1 + console_body2 +
-           console_body3 + console_body4;
+    return consoleHead + consoleBody1 + consoleBody2 + consoleBody3 +
+           consoleBody4;
 }
 
 class shellClient : public std::enable_shared_from_this<shellClient> {
@@ -189,9 +188,10 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         cout << "<script>document.getElementById('s" << index
              << "').innerHTML += '<b>" << tr_cmd << "</b>';</script>\n"
              << flush;
-        boost::asio::async_write(socket_, boost::asio::buffer(cmd, cmd.length()),
+        boost::asio::async_write(
+            socket_, boost::asio::buffer(cmd, cmd.length()),
             [this, self, cmd](boost::system::error_code ec,
-                            std::size_t length) {
+                              std::size_t length) {
                 if (!ec) {
                     cmd == "exit\n" ? socket_.close() : do_read();
                 }
@@ -242,9 +242,7 @@ void setClientInfo() {
     }
 }
 
-void printhttp() {
-    cout << get_console_page() << flush;
-}
+void printhttp() { cout << get_console_html() << flush; }
 
 int main() {
     try {

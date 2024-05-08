@@ -24,7 +24,7 @@ struct clientInfo {
 };
 
 string header = "Content-type: text/html\r\n\r\n";
-string get_panel_page() {
+string get_panel_html() {
     string panelHead = R"(
 	<!DOCTYPE html>
 	<html lang="en">
@@ -287,7 +287,7 @@ string get_panel_page() {
            panelBody4 + panelBody5 + panelBody6;
 }
 
-string get_console_page(vector<clientInfo> cnt) {
+string get_console_html(vector<clientInfo> cnt) {
     string consoleHead = R"(
 		<!DOCTYPE html>
 		<html lang="en">
@@ -439,7 +439,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                     string output = "<script>document.getElementById(\'s" +
                                     to_string(index) + "\').innerHTML += \'" +
                                     outputTmp + "\';</script>";
-                    doWriteClient(output);
+                    do_writeClient(output);
                     if (msg.find("%") != string::npos) {
                         if (cmds.size() > 0) {
                             string cmd = cmds.front();
@@ -450,8 +450,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                                 "<script>document.getElementById(\'s" +
                                 to_string(index) + "\').innerHTML += \'<b>" +
                                 commandTmp + "</b>\';</script>";
-                            doWriteClient(command);
-                            doWriteRemoteServer(cmd);
+                            do_writeClient(command);
+                            do_writeRemoteServer(cmd);
                         }
                     } else {
                         do_read();
@@ -460,7 +460,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
             });
     }
 
-    void doWriteClient(string output) {
+    void do_writeClient(string output) {
         auto self(shared_from_this());
         boost::asio::async_write(
             *shared_client_,
@@ -472,7 +472,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
             });
     }
 
-    void doWriteRemoteServer(string command) {
+    void do_writeRemoteServer(string command) {
         auto self(shared_from_this());
         boost::asio::async_write(
             socket_, boost::asio::buffer(command.c_str(), command.length()),
@@ -507,7 +507,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         string line;
         while (getline(ifs, line)) {
             cmds.push_back(line + "\n");
-            cout << "line: " << line << endl;
+            // cout << "line: " << line << endl;
         }
     }
 
@@ -583,7 +583,7 @@ class session : public std::enable_shared_from_this<session> {
 
     void panel_handler() {
         auto self(shared_from_this());
-        string panel_page = get_panel_page();
+        string panel_page = get_panel_html();
 
         boost::asio::async_write(
             socket_,
@@ -597,7 +597,7 @@ class session : public std::enable_shared_from_this<session> {
 
     void console_handler() {
         auto self(shared_from_this());
-        string console_page = get_console_page(clients);
+        string console_page = get_console_html(clients);
 
         boost::asio::async_write(
             socket_,
