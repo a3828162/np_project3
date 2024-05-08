@@ -4,4 +4,5 @@ part1:
 part2:
 	g++ -w cgi_server.cpp -o cgi_server -lws2_32 -lwsock32 -std=c++14 -pthread
 clean:
-	rm -f http_server console.cgi
+	rm -f http_server console.cgi 
+	rm -f cgi_server
