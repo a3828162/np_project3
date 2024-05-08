@@ -30,6 +30,86 @@ const string env_Variables[9] = {
 map<string, string> env;
 vector<clientInfo> clients(5);
 
+string get_console_page() {
+    string console_head = R"(
+		<!DOCTYPE html>
+		<html lang="en">
+		  <head>
+		    <meta charset="UTF-8" />
+		    <title>NP Project 3 Sample Console</title>
+		    <link
+		      rel="stylesheet"
+		      href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+		      integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2"
+		      crossorigin="anonymous"
+		    />
+		    <link
+		      href="https://fonts.googleapis.com/css?family=Source+Code+Pro"
+		      rel="stylesheet"
+		    />
+		    <link
+		      rel="icon"
+		      type="image/png"
+		      href="https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678068-terminal-512.png"
+		    />
+		    <style>
+		      * {
+		        font-family: 'Source Code Pro', monospace;
+		        font-size: 1rem !important;
+		      }
+		      body {
+		        background-color: #212529;
+		      }
+		      pre {
+		        color: #cccccc;
+		      }
+		      b {
+		        color: #01b468;
+		      }
+		    </style>
+		  </head>
+		  <body>
+		    <table class="table table-dark table-bordered">
+		      <thead>
+		        <tr>
+	)";
+
+    string console_body1;
+    for (int i = 0; i < clients.size(); i++) {
+        if (clients[i].hostName != "" && clients[i].port != "" &&
+            clients[i].testFile != "") {
+            console_body1 += "<th scope=\"col\">" + clients[i].hostName + ":" +
+                             clients[i].port + "</th>\r\n";
+        }
+    }
+
+    string console_body2 = R"(
+				</tr>
+		      </thead>
+		      <tbody>
+		        <tr>
+	)";
+
+    string console_body3;
+    for (int i = 0; i < clients.size(); i++) {
+        if (clients[i].hostName != "" && clients[i].port != "" &&
+            clients[i].testFile != "") {
+            console_body3 += "<td><pre id=\"s" + to_string(i) +
+                             "\" class=\"mb-0\"></pre></td>\r\n";
+        }
+    }
+    string console_body4 = R"(
+		        </tr>
+		      </tbody>
+		    </table>
+		  </body>
+		</html>
+	)";
+
+    return console_head + console_body1 + console_body2 +
+           console_body3 + console_body4;
+}
+
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
     shellClient(boost::asio::io_context &io_context, int index)
@@ -60,7 +140,6 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
             socket_, result,
             [this, self](boost::system::error_code ec, tcp::endpoint ed) {
                 if (!ec) {
-                    memset(data_, '\0', sizeof(data_));
                     in.open("./test_case/" + clients[index].testFile);
                     if (!in.is_open()) {
                         cout << clients[index].testFile << " open fail\n";
@@ -89,7 +168,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                     cout << "<script>document.getElementById('s" << index
                          << "').innerHTML += '" << tr_msg << "';</script>\n"
                          << flush;
-                    if (msg.find("% ") != string::npos) {
+                    if (msg.find("%") != string::npos) {
                         do_write();
                     } else {
                         do_read();
@@ -110,14 +189,13 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         cout << "<script>document.getElementById('s" << index
              << "').innerHTML += '<b>" << tr_cmd << "</b>';</script>\n"
              << flush;
-        boost::asio::async_write(socket_, boost::asio::buffer(cmd, cmd.size()),
-                                 [this, self, cmd](boost::system::error_code ec,
-                                                   std::size_t length) {
-                                     if (!ec) {
-                                         cmd == "exit\n" ? socket_.close()
-                                                         : do_read();
-                                     }
-                                 });
+        boost::asio::async_write(socket_, boost::asio::buffer(cmd, cmd.length()),
+            [this, self, cmd](boost::system::error_code ec,
+                            std::size_t length) {
+                if (!ec) {
+                    cmd == "exit\n" ? socket_.close() : do_read();
+                }
+            });
     }
 
     string transform_http_type(string &input) {
@@ -165,75 +243,7 @@ void setClientInfo() {
 }
 
 void printhttp() {
-    cout << "<!DOCTYPE html>" << '\n';
-    cout << "<html lang=\"en\">" << '\n';
-    cout << "  <head>" << '\n';
-    cout << "    <meta charset=\"UTF-8\" />" << '\n';
-    cout << "    <title>NP Project 3 Sample Console</title>" << '\n';
-    cout << "    <link" << '\n';
-    cout << "      rel=\"stylesheet\"" << '\n';
-    cout << "      "
-            "href=\"https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/"
-            "bootstrap.min.css\""
-         << '\n';
-    cout << "      "
-            "integrity=\"sha384-TX8t27EcRE3e/"
-            "ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2\""
-         << '\n';
-    cout << "      crossorigin=\"anonymous\"" << '\n';
-    cout << "    />" << '\n';
-    cout << "    <link" << '\n';
-    cout << "      "
-            "href=\"https://fonts.googleapis.com/css?family=Source+Code+Pro\""
-         << '\n';
-    cout << "      rel=\"stylesheet\"" << '\n';
-    cout << "    />" << '\n';
-    cout << "    <link" << '\n';
-    cout << "      rel=\"icon\"" << '\n';
-    cout << "      type=\"image/png\"" << '\n';
-    cout << "      "
-            "href=\"https://cdn0.iconfinder.com/data/icons/small-n-flat/24/"
-            "678068-terminal-512.png\""
-         << '\n';
-    cout << "    />" << '\n';
-    cout << "    <style>" << '\n';
-    cout << "      * {" << '\n';
-    cout << "        font-family: 'Source Code Pro', monospace;" << '\n';
-    cout << "        font-size: 1rem !important;" << '\n';
-    cout << "      }" << '\n';
-    cout << "      body {" << '\n';
-    cout << "        background-color: #212529;" << '\n';
-    cout << "      }" << '\n';
-    cout << "      pre {" << '\n';
-    cout << "        color: #cccccc;" << '\n';
-    cout << "      }" << '\n';
-    cout << "      b {" << '\n';
-    cout << "        color: #01b468;" << '\n';
-    cout << "      }" << '\n';
-    cout << "    </style>" << '\n';
-    cout << "  </head>" << '\n';
-    cout << "  <body>" << '\n';
-    cout << "    <table class=\"table table-dark table-bordered\">" << '\n';
-    cout << "      <thead>" << '\n';
-    cout << "        <tr>" << '\n';
-    for (int i = 0; i < clients.size(); i++) {
-        cout << "          <th scope=\"col\">" << clients[i].hostName << ":"
-             << clients[i].port << "</th>" << '\n';
-    }
-    cout << "        </tr>" << '\n';
-    cout << "      </thead>" << '\n';
-    cout << "      <tbody>" << '\n';
-    cout << "        <tr>" << '\n';
-    for (int i = 0; i < clients.size(); i++) {
-        cout << "          <td><pre id=\"s" << i
-             << "\" class=\"mb-0\"></pre></td>" << '\n';
-    }
-    cout << "        </tr>" << '\n';
-    cout << "      </tbody>" << '\n';
-    cout << "    </table>" << '\n';
-    cout << "  </body>" << '\n';
-    cout << "</html>" << '\n';
-    cout << flush;
+    cout << get_console_page() << flush;
 }
 
 int main() {
