@@ -25,7 +25,7 @@ struct clientInfo {
 
 string header = "Content-type: text/html\r\n\r\n";
 string get_panel_page() {
-    string panel_part1 = R"(
+    string panelHead = R"(
 	<!DOCTYPE html>
 	<html lang="en">
 	  <head>
@@ -65,48 +65,212 @@ string get_panel_page() {
 	        <tbody>
 	)";
 
-    string host_menu;
-    for (int i = 0; i < 12; i++) {
-        host_menu += "<option value=\"nplinux" + to_string(i + 1) +
-                     ".cs.nycu.edu.tw\">nplinux" + to_string(i + 1) +
-                     "</option>";
-    }
+    string panelBody1 = R"(
+         <tr>
+               <th scope="row" class="align-middle">Session 1</th>
+               <td>
+                 <div class="input-group">
+                   <select name="h0" class="custom-select">
+                     <option></option>
+                     <option value="nplinux1.cs.nycu.edu.tw">nplinux1</option>
+                     <option value="nplinux2.cs.nycu.edu.tw">nplinux2</option>
+                     <option value="nplinux3.cs.nycu.edu.tw">nplinux3</option>
+                     <option value="nplinux4.cs.nycu.edu.tw">nplinux4</option>
+                     <option value="nplinux5.cs.nycu.edu.tw">nplinux5</option>
+                     <option value="nplinux6.cs.nycu.edu.tw">nplinux6</option>
+                     <option value="nplinux7.cs.nycu.edu.tw">nplinux7</option>
+                     <option value="nplinux8.cs.nycu.edu.tw">nplinux8</option>
+                     <option value="nplinux9.cs.nycu.edu.tw">nplinux9</option>
+                     <option value="nplinux10.cs.nycu.edu.tw">nplinux10</option>
+                     <option value="nplinux11.cs.nycu.edu.tw">nplinux11</option>
+                     <option value="nplinux12.cs.nycu.edu.tw">nplinux12</option>
+                   </select>
+                   <div class="input-group-append">
+                     <span class="input-group-text">.cs.nycu.edu.tw</span>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <input name="p0" type="text" class="form-control" size="5" />
+               </td>
+               <td>
+                 <select name="f0" class="custom-select">
+                   <option></option>
+                   <option value="t1.txt">t1.txt</option>
+                   <option value="t2.txt">t2.txt</option>
+                   <option value="t3.txt">t3.txt</option>
+                   <option value="t4.txt">t4.txt</option>
+                   <option value="t5.txt">t5.txt</option>
+                 </select>
+               </td>
+         </tr>
+       )";
 
-    string panel_part2;
-    int N_SERVERS = 5;
-    for (int i = 0; i < N_SERVERS; i++) {
-        panel_part2 += (boost::format(R"(
-			<tr>
-	          <th scope="row" class="align-middle">Session %1%</th>
-	          <td>
-	            <div class="input-group">
-	              <select name="h%2%" class="custom-select">
-	                <option></option>"%3%"
-	              </select>
-	              <div class="input-group-append">
-	                <span class="input-group-text">.cs.nycu.edu.tw</span>
-	              </div>
-	            </div>
-	          </td>
-	          <td>
-	            <input name="p%2%" type="text" class="form-control" size="5" />
-	          </td>
-	          <td>
-	            <select name="f%2%" class="custom-select">
-	              <option></option>
-	              <option value="t1.txt">t1.txt</option>
-	              <option value="t2.txt">t2.txt</option>
-	              <option value="t3.txt">t3.txt</option>
-	              <option value="t4.txt">t4.txt</option>
-	              <option value="t5.txt">t5.txt</option>
-	            </select>
-	          </td>
-	        </tr>
-			)") % to_string(i + 1) %
-                        to_string(i) % host_menu)
-                           .str();
-    }
-    string panel_part3 = R"(
+    string panelBody2 = R"(
+         <tr>
+               <th scope="row" class="align-middle">Session 2</th>
+               <td>
+                 <div class="input-group">
+                   <select name="h1" class="custom-select">
+                     <option></option>
+                     <option value="nplinux1.cs.nycu.edu.tw">nplinux1</option>
+                     <option value="nplinux2.cs.nycu.edu.tw">nplinux2</option>
+                     <option value="nplinux3.cs.nycu.edu.tw">nplinux3</option>
+                     <option value="nplinux4.cs.nycu.edu.tw">nplinux4</option>
+                     <option value="nplinux5.cs.nycu.edu.tw">nplinux5</option>
+                     <option value="nplinux6.cs.nycu.edu.tw">nplinux6</option>
+                     <option value="nplinux7.cs.nycu.edu.tw">nplinux7</option>
+                     <option value="nplinux8.cs.nycu.edu.tw">nplinux8</option>
+                     <option value="nplinux9.cs.nycu.edu.tw">nplinux9</option>
+                     <option value="nplinux10.cs.nycu.edu.tw">nplinux10</option>
+                     <option value="nplinux11.cs.nycu.edu.tw">nplinux11</option>
+                     <option value="nplinux12.cs.nycu.edu.tw">nplinux12</option>
+                   </select>
+                   <div class="input-group-append">
+                     <span class="input-group-text">.cs.nycu.edu.tw</span>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <input name="p1" type="text" class="form-control" size="5" />
+               </td>
+               <td>
+                 <select name="f1" class="custom-select">
+                   <option></option>
+                   <option value="t1.txt">t1.txt</option>
+                   <option value="t2.txt">t2.txt</option>
+                   <option value="t3.txt">t3.txt</option>
+                   <option value="t4.txt">t4.txt</option>
+                   <option value="t5.txt">t5.txt</option>
+                 </select>
+               </td>
+         </tr>
+       )";
+
+    string panelBody3 = R"(
+         <tr>
+               <th scope="row" class="align-middle">Session 3</th>
+               <td>
+                 <div class="input-group">
+                   <select name="h2" class="custom-select">
+                     <option></option>
+                     <option value="nplinux1.cs.nycu.edu.tw">nplinux1</option>
+                     <option value="nplinux2.cs.nycu.edu.tw">nplinux2</option>
+                     <option value="nplinux3.cs.nycu.edu.tw">nplinux3</option>
+                     <option value="nplinux4.cs.nycu.edu.tw">nplinux4</option>
+                     <option value="nplinux5.cs.nycu.edu.tw">nplinux5</option>
+                     <option value="nplinux6.cs.nycu.edu.tw">nplinux6</option>
+                     <option value="nplinux7.cs.nycu.edu.tw">nplinux7</option>
+                     <option value="nplinux8.cs.nycu.edu.tw">nplinux8</option>
+                     <option value="nplinux9.cs.nycu.edu.tw">nplinux9</option>
+                     <option value="nplinux10.cs.nycu.edu.tw">nplinux10</option>
+                     <option value="nplinux11.cs.nycu.edu.tw">nplinux11</option>
+                     <option value="nplinux12.cs.nycu.edu.tw">nplinux12</option>
+                   </select>
+                   <div class="input-group-append">
+                     <span class="input-group-text">.cs.nycu.edu.tw</span>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <input name="p2" type="text" class="form-control" size="5" />
+               </td>
+               <td>
+                 <select name="f2" class="custom-select">
+                   <option></option>
+                   <option value="t1.txt">t1.txt</option>
+                   <option value="t2.txt">t2.txt</option>
+                   <option value="t3.txt">t3.txt</option>
+                   <option value="t4.txt">t4.txt</option>
+                   <option value="t5.txt">t5.txt</option>
+                 </select>
+               </td>
+         </tr>
+       )";
+
+    string panelBody4 = R"(
+         <tr>
+               <th scope="row" class="align-middle">Session 4</th>
+               <td>
+                 <div class="input-group">
+                   <select name="h3" class="custom-select">
+                     <option></option>
+                     <option value="nplinux1.cs.nycu.edu.tw">nplinux1</option>
+                     <option value="nplinux2.cs.nycu.edu.tw">nplinux2</option>
+                     <option value="nplinux3.cs.nycu.edu.tw">nplinux3</option>
+                     <option value="nplinux4.cs.nycu.edu.tw">nplinux4</option>
+                     <option value="nplinux5.cs.nycu.edu.tw">nplinux5</option>
+                     <option value="nplinux6.cs.nycu.edu.tw">nplinux6</option>
+                     <option value="nplinux7.cs.nycu.edu.tw">nplinux7</option>
+                     <option value="nplinux8.cs.nycu.edu.tw">nplinux8</option>
+                     <option value="nplinux9.cs.nycu.edu.tw">nplinux9</option>
+                     <option value="nplinux10.cs.nycu.edu.tw">nplinux10</option>
+                     <option value="nplinux11.cs.nycu.edu.tw">nplinux11</option>
+                     <option value="nplinux12.cs.nycu.edu.tw">nplinux12</option>
+                   </select>
+                   <div class="input-group-append">
+                     <span class="input-group-text">.cs.nycu.edu.tw</span>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <input name="p3" type="text" class="form-control" size="5" />
+               </td>
+               <td>
+                 <select name="f3" class="custom-select">
+                   <option></option>
+                   <option value="t1.txt">t1.txt</option>
+                   <option value="t2.txt">t2.txt</option>
+                   <option value="t3.txt">t3.txt</option>
+                   <option value="t4.txt">t4.txt</option>
+                   <option value="t5.txt">t5.txt</option>
+                 </select>
+               </td>
+         </tr>
+       )";
+
+    string panelBody5 = R"(
+         <tr>
+               <th scope="row" class="align-middle">Session 5</th>
+               <td>
+                 <div class="input-group">
+                   <select name="h4" class="custom-select">
+                     <option></option>
+                     <option value="nplinux1.cs.nycu.edu.tw">nplinux1</option>
+                     <option value="nplinux2.cs.nycu.edu.tw">nplinux2</option>
+                     <option value="nplinux3.cs.nycu.edu.tw">nplinux3</option>
+                     <option value="nplinux4.cs.nycu.edu.tw">nplinux4</option>
+                     <option value="nplinux5.cs.nycu.edu.tw">nplinux5</option>
+                     <option value="nplinux6.cs.nycu.edu.tw">nplinux6</option>
+                     <option value="nplinux7.cs.nycu.edu.tw">nplinux7</option>
+                     <option value="nplinux8.cs.nycu.edu.tw">nplinux8</option>
+                     <option value="nplinux9.cs.nycu.edu.tw">nplinux9</option>
+                     <option value="nplinux10.cs.nycu.edu.tw">nplinux10</option>
+                     <option value="nplinux11.cs.nycu.edu.tw">nplinux11</option>
+                     <option value="nplinux12.cs.nycu.edu.tw">nplinux12</option>
+                   </select>
+                   <div class="input-group-append">
+                     <span class="input-group-text">.cs.nycu.edu.tw</span>
+                   </div>
+                 </div>
+               </td>
+               <td>
+                 <input name="p4" type="text" class="form-control" size="5" />
+               </td>
+               <td>
+                 <select name="f4" class="custom-select">
+                   <option></option>
+                   <option value="t1.txt">t1.txt</option>
+                   <option value="t2.txt">t2.txt</option>
+                   <option value="t3.txt">t3.txt</option>
+                   <option value="t4.txt">t4.txt</option>
+                   <option value="t5.txt">t5.txt</option>
+                 </select>
+               </td>
+         </tr>
+       )";
+
+    string panelBody6 = R"(
 			<tr>
 	          <td colspan="3"></td>
 	          <td>
@@ -119,12 +283,12 @@ string get_panel_page() {
 	  </body>
 	  </html>
 	)";
-
-    return header + panel_part1 + panel_part2 + panel_part3;
+    return header + panelHead + panelBody1 + panelBody2 + panelBody3 +
+           panelBody4 + panelBody5 + panelBody6;
 }
 
 string get_console_page(vector<clientInfo> cnt) {
-    string console_head = R"(
+    string consoleHead = R"(
 		<!DOCTYPE html>
 		<html lang="en">
 		  <head>
@@ -166,31 +330,31 @@ string get_console_page(vector<clientInfo> cnt) {
 		      <thead>
 		        <tr>
 	)";
-    string console_part1;
+    string consoleBody1;
     for (int i = 0; i < cnt.size(); i++) {
         if (cnt[i].hostName != "" && cnt[i].port != "" &&
             cnt[i].testFile != "") {
-            console_part1 += "<th scope=\"col\">" + cnt[i].hostName + ":" +
-                             cnt[i].port + "</th>\r\n";
+            consoleBody1 += "<th scope=\"col\">" + cnt[i].hostName + ":" +
+                            cnt[i].port + "</th>\r\n";
         }
     }
 
-    string console_part2 = R"(
+    string consoleBody2 = R"(
 				</tr>
 		      </thead>
 		      <tbody>
 		        <tr>
 	)";
 
-    string console_part3;
+    string consoleBody3;
     for (int i = 0; i < cnt.size(); i++) {
         if (cnt[i].hostName != "" && cnt[i].port != "" &&
             cnt[i].testFile != "") {
-            console_part3 += "<td><pre id=\"s" + to_string(i) +
-                             "\" class=\"mb-0\"></pre></td>\r\n";
+            consoleBody3 += "<td><pre id=\"s" + to_string(i) +
+                            "\" class=\"mb-0\"></pre></td>\r\n";
         }
     }
-    string console_part4 = R"(
+    string consoleBody4 = R"(
 		        </tr>
 		      </tbody>
 		    </table>
@@ -198,8 +362,8 @@ string get_console_page(vector<clientInfo> cnt) {
 		</html>
 	)";
 
-    return header + console_head + console_part1 + console_part2 +
-           console_part3 + console_part4;
+    return header + consoleHead + consoleBody1 + consoleBody2 + consoleBody3 +
+           consoleBody4;
 }
 
 const string env_Variables[9] = {
@@ -267,21 +431,25 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                 if (!ec) {
                     data_[length] = '\0';
                     string msg(data_);
-                    /*cout << "Read from " << clientPtr->hostName << ":"
+                    cout << "Read from " << clientPtr->hostName << ":"
                          << clientPtr->port << " : " << msg << endl;
-                    cout << "====================\n";*/
                     memset(data_, '\0', sizeof(data_));
-                    string output = output_to_client(msg);
-                    // cout << "output: " << output << endl;
+
+                    string outputTmp = htmlEscape(msg);
+                    string output = "<script>document.getElementById(\'s" +
+                                    to_string(index) + "\').innerHTML += \'" +
+                                    outputTmp + "\';</script>";
                     doWriteClient(output);
                     if (msg.find("%") != string::npos) {
                         if (cmds.size() > 0) {
                             string cmd = cmds.front();
                             cmds.erase(cmds.begin());
-                            cout << "cmd: " << cmd << " size: " << cmd.size()
-                                 << endl;
 
-                            string command = command_to_client(cmd);
+                            string commandTmp = htmlEscape(cmd);
+                            string command =
+                                "<script>document.getElementById(\'s" +
+                                to_string(index) + "\').innerHTML += \'<b>" +
+                                commandTmp + "</b>\';</script>";
                             doWriteClient(command);
                             doWriteRemoteServer(cmd);
                         }
@@ -322,19 +490,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                 }
             });
     }
-    string output_to_client(string msg) {
-        string escaped = html_escape(msg);
-        return +"<script>document.getElementById(\'s" + to_string(index) +
-               "\').innerHTML += \'" + escaped + "\';</script>";
-    }
 
-    string command_to_client(string msg) {
-        string escaped = html_escape(msg);
-        return +"<script>document.getElementById(\'s" + to_string(index) +
-               "\').innerHTML += \'<b>" + escaped + "</b>\';</script>";
-    }
-
-    string html_escape(string str) {
+    string htmlEscape(string str) {
         boost::replace_all(str, "&", "&amp;");
         boost::replace_all(str, ">", "&gt;");
         boost::replace_all(str, "<", "&lt;");
@@ -354,7 +511,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         }
     }
 
-    vector<string> cmds;
+    vector<string> cmds;                    // store commands
     tcp::resolver resolver;                 // resolve host name to ip address
     tcp::socket socket_;                    // socket to remote np server
     shared_ptr<tcp::socket> shared_client_; // share ptr to browser socket
@@ -362,7 +519,6 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     int index;                              // index of client in clients vector
     enum { max_length = 4096 };             // max length of data
     char data_[max_length];                 // data buffer
-    // boost::asio::io_context &io_context_;
 };
 
 class session : public std::enable_shared_from_this<session> {
