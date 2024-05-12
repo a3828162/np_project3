@@ -158,8 +158,6 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
             boost::asio::buffer(data_, max_length),
             [this, self](boost::system::error_code ec, std::size_t length) {
                 if (!ec) {
-                    if (length == 0)
-                        return;
                     data_[length] = '\0';
                     string msg = string(data_);
                     memset(data_, '\0', sizeof(data_));
