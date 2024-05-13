@@ -371,22 +371,28 @@ const string env_Variables[9] = {
     "SERVER_PROTOCOL", "HTTP_HOST",   "SERVER_ADDR",
     "SERVER_PORT",     "REMOTE_ADDR", "REMOTE_PORT"};
 
-vector<clientInfo> clients(5);
+// vector<clientInfo> clients(5);
 
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
     shellClient(boost::asio::io_context &io_context,
                 tcp::socket remoteServerSocket,
-                shared_ptr<tcp::socket> shared_client, int c_index)
+                shared_ptr<tcp::socket> shared_client, clientInfo &client_,
+                int c_index)
         : resolver(io_context), socket_(move(remoteServerSocket)),
           shared_client_(shared_client) {
         index = c_index;
-        clientPtr = &clients[index];
+        clientPtr = &client_;
     }
 
     void start() {
-        cout << "Start Remote Server\n";
+        cout << "Start Remote NP Golden Server\n";
         cmds.clear();
+        cout << "===========\n";
+        cout << "hostName: " << clientPtr->hostName << endl;
+        cout << "port: " << clientPtr->port << endl;
+        cout << "testFile: " << clientPtr->testFile << endl;
+        cout << "===========\n";
         readCommandFromFile();
         do_resolve();
     }
@@ -394,8 +400,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
   private:
     void do_resolve() {
         auto self(shared_from_this());
-        cout << "Resolving " << clientPtr->hostName << ":" << clientPtr->port
-             << endl;
+        // cout << "Resolving " << clientPtr->hostName << ":" << clientPtr->port
+        //      << endl;
         tcp::resolver::query query(clientPtr->hostName, clientPtr->port);
         resolver.async_resolve(
             query, [this, self](boost::system::error_code ec,
@@ -431,8 +437,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
                 if (!ec) {
                     data_[length] = '\0';
                     string msg(data_);
-                    cout << "Read from " << clientPtr->hostName << ":"
-                         << clientPtr->port << " : " << msg << endl;
+                    // cout << "Read from " << clientPtr->hostName << ":"
+                    //      << clientPtr->port << " : " << msg << endl;
                     memset(data_, '\0', sizeof(data_));
 
                     string outputTmp = htmlEscape(msg);
@@ -478,8 +484,8 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
             socket_, boost::asio::buffer(command.c_str(), command.length()),
             [this, self, command](boost::system::error_code ec, size_t) {
                 if (!ec) {
-                    cout << "Write to " << clientPtr->hostName << ":"
-                         << clientPtr->port << " OK" << endl;
+                    /*cout << "Write to " << clientPtr->hostName << ":"
+                         << clientPtr->port << " OK" << endl;*/
                     if (command.find("exit") == string::npos) {
                         do_read();
 
@@ -554,10 +560,11 @@ class session : public std::enable_shared_from_this<session> {
             [this, self](boost::system::error_code ec, size_t s) {
                 string cgiFileName = env[env_Variables[1]].substr(
                     0, env[env_Variables[1]].find("?"));
-                cout << cgiFileName << endl;
+                // cout << cgiFileName << endl;
                 if (cgiFileName == "/panel.cgi") {
                     panel_handler();
                 } else if (cgiFileName == "/console.cgi") {
+
                     clients.clear();
                     clients.assign(5, clientInfo{});
                     setClientInfo();
@@ -568,10 +575,10 @@ class session : public std::enable_shared_from_this<session> {
                         if (clients[i].hostName != "" &&
                             clients[i].port != "" &&
                             clients[i].testFile != "") {
-                            tcp::socket remoteClient_(io_context_);
-                            make_shared<shellClient>(io_context_,
-                                                     move(remoteClient_),
-                                                     shared_client_, i)
+                            tcp::socket remote_Client_(io_context_);
+                            make_shared<shellClient>(
+                                io_context_, move(remote_Client_),
+                                shared_client_, clients[i], i)
                                 ->start();
                         }
                     }
@@ -657,11 +664,12 @@ class session : public std::enable_shared_from_this<session> {
             env[env_Variables[2]] = "";
         }
 
-        for (auto &[key, value] : env) {
-            // cout << key << " : " << value << endl;
-        }
+        // for (auto &[key, value] : env) {
+        //  cout << key << " : " << value << endl;
+        //}
     }
 
+    vector<clientInfo> clients;
     boost::asio::io_context &io_context_;
     tcp::socket socket_;
     enum { max_length = 1024 };
