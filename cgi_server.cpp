@@ -287,7 +287,7 @@ string get_panel_html() {
            panelBody4 + panelBody5 + panelBody6;
 }
 
-string get_console_html(vector<clientInfo> cnt) {
+string get_console_html(vector<clientInfo> clients) {
     string consoleHead = R"(
 		<!DOCTYPE html>
 		<html lang="en">
@@ -331,11 +331,11 @@ string get_console_html(vector<clientInfo> cnt) {
 		        <tr>
 	)";
     string consoleBody1;
-    for (int i = 0; i < cnt.size(); i++) {
-        if (cnt[i].hostName != "" && cnt[i].port != "" &&
-            cnt[i].testFile != "") {
-            consoleBody1 += "<th scope=\"col\">" + cnt[i].hostName + ":" +
-                            cnt[i].port + "</th>\r\n";
+    for (int i = 0; i < clients.size(); i++) {
+        if (clients[i].hostName != "" && clients[i].port != "" &&
+            clients[i].testFile != "") {
+            consoleBody1 += "<th scope=\"col\">" + clients[i].hostName + ":" +
+                            clients[i].port + "</th>\r\n";
         }
     }
 
@@ -347,9 +347,9 @@ string get_console_html(vector<clientInfo> cnt) {
 	)";
 
     string consoleBody3;
-    for (int i = 0; i < cnt.size(); i++) {
-        if (cnt[i].hostName != "" && cnt[i].port != "" &&
-            cnt[i].testFile != "") {
+    for (int i = 0; i < clients.size(); i++) {
+        if (clients[i].hostName != "" && clients[i].port != "" &&
+            clients[i].testFile != "") {
             consoleBody3 += "<td><pre id=\"s" + to_string(i) +
                             "\" class=\"mb-0\"></pre></td>\r\n";
         }
