@@ -29,6 +29,9 @@ const string env_Variables[9] = {
 
 map<string, string> env;
 vector<clientInfo> clients(5);
+boost::asio::io_context global_io_context;
+boost::asio::deadline_timer timer(global_io_context);
+
 
 string get_console_html() {
     string consoleHead = R"(
@@ -186,6 +189,25 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         cout << "<script>document.getElementById('s" << index
              << "').innerHTML += '<b>" << tr_cmd << "</b>';</script>\n"
              << flush;
+        timer.expires_from_now(boost::posix_time::seconds(1));
+        timer.async_wait([this, self, cmd](const boost::system::error_code &ec) {
+            if (!ec) {
+                do_wait_write(cmd);
+                //do_write();
+            }
+        });
+        /*boost::asio::async_write(
+            socket_, boost::asio::buffer(cmd, cmd.length()),
+            [this, self, cmd](boost::system::error_code ec,
+                              std::size_t length) {
+                if (!ec) {
+                    cmd == "exit\n" ? socket_.close() : do_read();
+                }
+            });*/
+    }
+
+    void do_wait_write(string cmd){
+        auto self(shared_from_this());
         boost::asio::async_write(
             socket_, boost::asio::buffer(cmd, cmd.length()),
             [this, self, cmd](boost::system::error_code ec,
