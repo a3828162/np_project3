@@ -29,8 +29,7 @@ const string env_Variables[9] = {
 
 map<string, string> env;
 vector<clientInfo> clients(5);
-boost::asio::io_context global_io_context;
-boost::asio::deadline_timer timer(global_io_context);
+//boost::asio::io_context global_io_context;
 
 
 string get_console_html() {
@@ -115,7 +114,7 @@ string get_console_html() {
 class shellClient : public std::enable_shared_from_this<shellClient> {
   public:
     shellClient(boost::asio::io_context &io_context, int index)
-        : resolver(io_context), socket_(io_context), index(index) {}
+        : resolver(io_context), socket_(io_context), index(index), timer(io_context) {}
 
     void start() { do_resolve(); }
 
@@ -192,6 +191,7 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
         timer.expires_from_now(boost::posix_time::seconds(1));
         timer.async_wait([this, self, cmd](const boost::system::error_code &ec) {
             if (!ec) {
+                cerr << "Sucess wait one second\n";
                 do_wait_write(cmd);
                 //do_write();
             }
@@ -235,6 +235,9 @@ class shellClient : public std::enable_shared_from_this<shellClient> {
     tcp::socket socket_;
     int index;
     ifstream in;
+    boost::asio::deadline_timer timer;
+    //boost::asio::io_context &io_context_2;
+    
     enum { max_length = 4096 };
     char data_[max_length];
 };
